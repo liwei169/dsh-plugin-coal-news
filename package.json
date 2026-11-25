@@ -1,56 +1,56 @@
 {
-    "name":  "dsh-plugin-coal-news",
-    "version":  "0.8.2",
-    "description":  "煤矿资讯：在 DSH 左下角常驻「腾盛推荐」信息板，每 30 秒刷新煤矿科技、安全、价格与政策动态。",
-    "license":  "MIT",
-    "type":  "module",
-    "keywords":  [
-                     "dsh",
-                     "dsh-plugin",
-                     "deepseek-harness",
-                     "coal",
-                     "coal-news",
-                     "煤矿",
-                     "煤炭资讯"
-                 ],
-    "publishConfig":  {
-                          "access":  "public"
-                      },
-    "engines":  {
-                    "node":  "\u003e=20"
-                },
-    "scripts":  {
-                    "check":  "node --check index.js \u0026\u0026 node --check client.js",
-                    "test":  "node --test \"test/*.test.mjs\"",
-                    "self":  "node scripts/selftest.mjs"
-                },
-    "exports":  {
-                    ".":  "./index.js",
-                    "./client":  "./client.js",
-                    "./locale/*.json":  "./locale/*.json",
-                    "./icon":  "./icon.svg",
-                    "./package.json":  "./package.json"
-                },
-    "files":  [
-                  "index.js",
-                  "client.js",
-                  "cordis.patch.yml",
-                  "src",
-                  "locale/*.json",
-                  "docs",
-                  "icon.svg",
-                  "CHANGELOG.md"
-              ],
-    "dsh":  {
-                "bundle":  {
-                               "patch":  "./cordis.patch.yml"
-                           },
-                "client":  {
-                               "platform":  "web",
-                               "immediately":  true,
-                               "inject":  [
-                                              "@deepseek-ai/dsh-client-ui-layout"
-                                          ]
-                           }
-            }
+  "name": "dsh-plugin-coal-news",
+  "version": "0.8.3",
+  "description": "煤矿资讯：在 DSH 左下角常驻「腾盛推荐」信息板，每 30 秒刷新煤矿科技、安全、价格与政策动态。",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "coal",
+    "coal-news",
+    "煤矿",
+    "煤炭资讯"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check client.js",
+    "test": "node --test \"test/*.test.mjs\"",
+    "self": "node scripts/selftest.mjs"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "src",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "CHANGELOG.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  }
 }
