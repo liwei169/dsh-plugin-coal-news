@@ -21,7 +21,7 @@ function fakeReact() {
   };
 }
 
-function loadClient({ storage = {}, language = 'zh-CN' } = {}) {
+function loadClient({ storage = {}, session = {}, language = 'zh-CN' } = {}) {
   let registration;
   const window = { __ModuleLoader__: { load(spec) { registration = spec; } } };
   const context = vm.createContext({
@@ -33,6 +33,13 @@ function loadClient({ storage = {}, language = 'zh-CN' } = {}) {
         return Object.hasOwn(storage, key) ? storage[key] : null;
       },
       setItem() {},
+    },
+    sessionStorage: {
+      getItem(key) {
+        return Object.hasOwn(session, key) ? session[key] : null;
+      },
+      setItem() {},
+      removeItem() {},
     },
   });
   vm.runInContext(SOURCE, context, { filename: 'client.js' });
@@ -195,4 +202,20 @@ test('the header exposes a close control', () => {
   assert.ok(close !== undefined, 'close button rendered');
   assert.equal(close.props.type, 'button');
   assert.ok(String(close.props['aria-label'] ?? '').length > 0, 'close is labelled');
+});
+
+test('a closed session renders no panel and no restore affordance', () => {
+  const plugin = loadClient({ session: { 'dsh.coal-news.closed.session.v1': '1' } });
+  const { ctx, registrations } = fakeCtx();
+  plugin.apply(ctx);
+  assert.equal(registrations[0].component(), null);
+});
+
+test('a fresh session renders the panel again', () => {
+  const plugin = loadClient({ session: {} });
+  const { ctx, registrations } = fakeCtx();
+  plugin.apply(ctx);
+  const tree = registrations[0].component();
+  assert.notEqual(tree, null);
+  assert.ok(texts(tree).includes('腾盛推荐'));
 });

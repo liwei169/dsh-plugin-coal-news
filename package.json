@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-coal-news",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "煤矿资讯：在 DSH 左下角常驻「腾盛推荐」信息板，每 30 秒刷新煤矿科技、安全、价格与政策动态。",
   "license": "MIT",
   "type": "module",

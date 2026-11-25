@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser half of the coal-news plugin.
  *
  * Renders the bottom-left panel and polls the Host every 30 seconds. All
@@ -19,6 +19,9 @@ window.__ModuleLoader__.load({
     const SNAPSHOT_KEY = 'dsh.coal-news.snapshot.v1';
     const COLLAPSED_KEY = 'dsh.coal-news.collapsed.v1';
     const POSITION_KEY = 'dsh.coal-news.position.v1';
+    // Session-scoped: closing hides the panel until the Harness window is
+    // reopened; a page reload keeps it hidden, a new launch clears it.
+    const CLOSED_KEY = 'dsh.coal-news.closed.session.v1';
     const CATEGORY_KEYS = ['all', 'tech', 'safety', 'price', 'policy', 'other'];
 
     const TEXT = {
@@ -38,7 +41,6 @@ window.__ModuleLoader__.load({
         refreshHint: '30 秒刷新',
         dragHint: '按住标题可拖动，双击复位',
         close: '关闭',
-        open: '打开煤矿资讯',
         justNow: '刚刚',
         minutesAgo: (n) => `${n} 分钟前`,
         hoursAgo: (n) => `${n} 小时前`,
@@ -61,7 +63,6 @@ window.__ModuleLoader__.load({
         refreshHint: 'every 30s',
         dragHint: 'Drag the title to move, double-click to reset',
         close: 'Close',
-        open: 'Open coal news',
         justNow: 'just now',
         minutesAgo: (n) => `${n} min ago`,
         hoursAgo: (n) => `${n} h ago`,
@@ -105,30 +106,6 @@ window.__ModuleLoader__.load({
 .dsh-coal-news.is-dragging .dcn-head { cursor: grabbing; }
 .dsh-coal-news.is-dragging { transition: none; }
 .dcn-close { font-size: 15px; line-height: 20px; }
-.dcn-pill-wrap {
-  position: absolute;
-  left: calc(16px + env(safe-area-inset-left, 0px));
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  pointer-events: auto;
-}
-.dcn-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-separator-secondary, rgba(128, 128, 128, 0.25));
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-3);
-  color: var(--dsw-alias-label-primary);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.dcn-pill:hover { background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.12)); }
-.dcn-pill-label { white-space: nowrap; }
 .dsh-coal-news:not(.is-collapsed) .dcn-head {
   border-bottom: 1px solid var(--dsw-alias-separator-secondary, rgba(128, 128, 128, 0.18));
 }
@@ -290,6 +267,25 @@ window.__ModuleLoader__.load({
       return readJson(COLLAPSED_KEY) === true;
     }
 
+    function readClosedThisSession() {
+      try {
+        if (typeof sessionStorage === 'undefined') return false;
+        return sessionStorage.getItem(CLOSED_KEY) === '1';
+      } catch {
+        return false;
+      }
+    }
+
+    function writeClosedThisSession(closed) {
+      try {
+        if (typeof sessionStorage === 'undefined') return;
+        if (closed) sessionStorage.setItem(CLOSED_KEY, '1');
+        else sessionStorage.removeItem(CLOSED_KEY);
+      } catch {
+        // A disabled storage must not break the panel.
+      }
+    }
+
     function readPosition() {
       const parsed = readJson(POSITION_KEY);
       if (parsed === null || typeof parsed !== 'object') return null;
@@ -376,7 +372,7 @@ window.__ModuleLoader__.load({
         const [now, setNow] = useState(() => Date.now());
         const [position, setPosition] = useState(readPosition);
         const [dragging, setDragging] = useState(false);
-        const [closed, setClosed] = useState(false);
+        const [closed, setClosed] = useState(readClosedThisSession);
 
         const quotesRef = useRef(quotes);
         quotesRef.current = quotes;
@@ -612,32 +608,16 @@ window.__ModuleLoader__.load({
             className: 'dcn-icon dcn-close',
             title: text.close,
             'aria-label': text.close,
-            onClick: () => setClosed(true),
+            onClick: () => {
+              writeClosedThisSession(true);
+              setClosed(true);
+            },
           }, '×'),
         );
 
-        if (closed) {
-          return h(
-            'div',
-            { className: 'dcn-pill-wrap', style: positionStyle(position) },
-            h('style', null, STYLES),
-            h(
-              'button',
-              {
-                type: 'button',
-                className: 'dcn-pill',
-                title: text.open,
-                'aria-label': text.open,
-                onClick: () => {
-                  setClosed(false);
-                  void load();
-                },
-              },
-              h('span', { className: 'dcn-dot', 'aria-hidden': 'true' }),
-              h('span', { className: 'dcn-pill-label' }, text.badge),
-            ),
-          );
-        }
+        // Closed for this Harness session: render nothing at all, no restore
+        // affordance. Reopening Harness clears the session flag.
+        if (closed) return null;
 
         if (collapsed) {
           return h('section', sectionProps, h('style', null, STYLES), header);
@@ -744,3 +724,4 @@ window.__ModuleLoader__.load({
     };
   },
 });
+
