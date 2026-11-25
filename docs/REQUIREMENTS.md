@@ -1,9 +1,8 @@
 # 煤矿资讯插件 · 需求清单与实现方案
 
 - 版本：v0.1（2026-11-25）
-- 包名 / 仓库名：`dsh-plugin-coal-news`（GitHub：`liwei169/dsh-plugin-coal-news`）
+- 包名：`dsh-plugin-coal-news`
 - 状态：设计稿，待确认第 12 节的三项决策后进入实现
-- 与同目录的 `计量插件`（`dsh-plugin-greeting-bubble`）完全独立：独立仓库、独立 npm 包、独立版本线
 
 ---
 

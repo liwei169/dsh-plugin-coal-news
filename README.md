@@ -2,10 +2,6 @@
 
 在 DeepSeek Harness 左下角常驻一块「**腾盛推荐**」信息板：分类查看煤矿行业的科技、安全、价格与政策动态，每 30 秒刷新，并实时显示焦煤、焦炭主连价格。
 
-- 包名：`dsh-plugin-coal-news`
-- 仓库：<https://github.com/liwei169/dsh-plugin-coal-news>
-- 与 `dsh-plugin-greeting-bubble`（计量插件）完全独立：独立仓库、独立 npm 包、独立版本线
-
 ---
 
 ## 功能
@@ -50,13 +46,7 @@
 
 ## 安装
 
-**从 npm（发布后）**：DSH → **插件** → **添加插件** → 填 `dsh-plugin-coal-news` → 安装。
-
-**从本地目录（开发）**：插件页 → 添加插件 → 填本目录路径：
-
-```
-D:\插件实现\煤矿资讯
-```
+DSH → **插件** → **添加插件** → 填 `dsh-plugin-coal-news` → 安装。
 
 安装后刷新 DSH 页面，左下角出现「腾盛推荐」面板。
 
@@ -95,25 +85,6 @@ node scripts/report.mjs   # 更细的报告：按来源/月份统计、最新 10
 `npm run self` 会访问外网，需要能连通上述站点。
 
 需求与设计文档见 [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)。
-
-## 发布
-
-```powershell
-# GitHub
-git init
-git branch -M main
-git add .
-git commit -m "feat: coal news panel for DeepSeek Harness"
-git remote add origin https://github.com/liwei169/dsh-plugin-coal-news.git
-git push -u origin main
-git tag v0.2.0
-git push origin v0.2.0
-
-# npm（先确认 package.json 的 version 已递增）
-npm publish --access public
-```
-
-发布前自查：`npm test` 通过、`files` 覆盖运行所需文件、`client.js` 里的模块 id 与包名一致、`cordis.patch.yml` 的行 `name` 与包名一致。
 
 ## 已知限制
 
