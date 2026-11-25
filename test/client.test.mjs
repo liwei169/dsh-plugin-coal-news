@@ -193,6 +193,17 @@ test('a bottom-anchored position keeps the panel growing upward', () => {
   assert.equal(tree.props.style.top, 'auto');
 });
 
+test('a right-anchored position follows the right edge when the window grows', () => {
+  const plugin = loadClient({ storage: { 'dsh.coal-news.position.v1': JSON.stringify({ right: 24, bottom: 16 }) } });
+  const { ctx, registrations } = fakeCtx();
+  plugin.apply(ctx);
+  const tree = registrations[0].component();
+  assert.equal(tree.props.style.right, 24);
+  assert.equal(tree.props.style.bottom, 16);
+  assert.equal(tree.props.style.left, 'auto');
+  assert.equal(tree.props.style.top, 'auto');
+});
+
 test('the header exposes a close control', () => {
   const plugin = loadClient();
   const { ctx, registrations } = fakeCtx();

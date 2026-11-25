@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Browser half of the coal-news plugin.
  *
  * Renders the bottom-left panel and polls the Host every 30 seconds. All
@@ -289,22 +289,35 @@ window.__ModuleLoader__.load({
     function readPosition() {
       const parsed = readJson(POSITION_KEY);
       if (parsed === null || typeof parsed !== 'object') return null;
-      const left = Number(parsed.left);
-      if (!Number.isFinite(left)) return null;
-      // A bottom anchor keeps the panel's lower edge fixed, so expanding grows
-      // upward instead of running off the bottom of the screen.
-      const bottom = Number(parsed.bottom);
-      if (Number.isFinite(bottom)) return { left, bottom };
-      const top = Number(parsed.top);
-      return Number.isFinite(top) ? { left, top } : null;
+      // Either edge may anchor an axis: the nearest edge keeps its gap when the
+      // window grows, so a panel parked at the bottom-right stays there.
+      const horizontal = Number.isFinite(Number(parsed.right))
+        ? { right: Number(parsed.right) }
+        : Number.isFinite(Number(parsed.left)) ? { left: Number(parsed.left) } : null;
+      const vertical = Number.isFinite(Number(parsed.bottom))
+        ? { bottom: Number(parsed.bottom) }
+        : Number.isFinite(Number(parsed.top)) ? { top: Number(parsed.top) } : null;
+      return horizontal === null || vertical === null ? null : { ...horizontal, ...vertical };
     }
 
     /** Inline offset for a stored position; undefined keeps the CSS corner. */
     function positionStyle(position) {
       if (position === null) return undefined;
-      return position.bottom !== undefined
-        ? { left: position.left, bottom: position.bottom, top: 'auto' }
-        : { left: position.left, top: position.top, bottom: 'auto' };
+      const style = {};
+      if (position.right !== undefined) {
+        style.right = position.right;
+        style.left = 'auto';
+      } else {
+        style.left = position.left;
+      }
+      if (position.bottom !== undefined) {
+        style.bottom = position.bottom;
+        style.top = 'auto';
+      } else {
+        style.top = position.top;
+        style.bottom = 'auto';
+      }
+      return style;
     }
 
     /**
@@ -320,11 +333,13 @@ window.__ModuleLoader__.load({
       const width = parentRect === null ? window.innerWidth : parentRect.width;
       const height = parentRect === null ? window.innerHeight : parentRect.height;
       const maxLeft = Math.max(8, width - rect.width - 8);
-      const maxBottom = Math.max(8, height - rect.height - 8);
-      const left = Math.min(Math.max(8, position.left), maxLeft);
-      return position.bottom !== undefined
-        ? { left, bottom: Math.min(Math.max(8, position.bottom), maxBottom) }
-        : { left, top: Math.min(Math.max(8, position.top), maxBottom) };
+      const maxTop = Math.max(8, height - rect.height - 8);
+      const next = {};
+      if (position.right !== undefined) next.right = Math.min(Math.max(8, position.right), maxLeft);
+      else next.left = Math.min(Math.max(8, position.left), maxLeft);
+      if (position.bottom !== undefined) next.bottom = Math.min(Math.max(8, position.bottom), maxTop);
+      else next.top = Math.min(Math.max(8, position.top), maxTop);
+      return next;
     }
 
     async function rpc(ctx, endpoint, payload, signal) {
@@ -465,8 +480,8 @@ window.__ModuleLoader__.load({
         }, [collapsed]);
 
         // Keep a restored position inside the window, and migrate an older
-        // top anchor that sits in the lower half to a bottom anchor so it
-        // expands upward like a freshly dragged panel.
+        // anchor to the nearer edge: top→bottom in the lower half, left→right in
+        // the right half, so the panel keeps its corner when the window grows.
         useEffect(() => {
           if (positionRef.current === null) return;
           const normalize = () => {
@@ -477,15 +492,24 @@ window.__ModuleLoader__.load({
               const rect = element.getBoundingClientRect();
               const parent = element.offsetParent;
               const parentRect = parent === null ? null : parent.getBoundingClientRect();
+              const parentLeft = parentRect?.left ?? 0;
               const parentTop = parentRect?.top ?? 0;
+              const parentWidth = parentRect?.width ?? window.innerWidth;
               const parentHeight = parentRect?.height ?? window.innerHeight;
+              const relativeLeft = rect.left - parentLeft;
               const relativeTop = rect.top - parentTop;
-              if (current.top !== undefined && relativeTop + rect.height / 2 > parentHeight / 2) {
-                const next = { left: current.left, bottom: Math.max(8, parentHeight - (relativeTop + rect.height)) };
-                writeJson(POSITION_KEY, next);
-                return next;
+              let next = { ...current };
+              if (next.right === undefined && relativeLeft + rect.width / 2 > parentWidth / 2) {
+                next = { ...next, right: Math.max(8, parentWidth - relativeLeft - rect.width) };
+                delete next.left;
               }
-              return clampPosition(current, element);
+              if (next.bottom === undefined && relativeTop + rect.height / 2 > parentHeight / 2) {
+                next = { ...next, bottom: Math.max(8, parentHeight - relativeTop - rect.height) };
+                delete next.top;
+              }
+              const clamped = clampPosition(next, element);
+              if (JSON.stringify(clamped) !== JSON.stringify(current)) writeJson(POSITION_KEY, clamped);
+              return clamped;
             });
           };
           normalize();
@@ -536,8 +560,9 @@ window.__ModuleLoader__.load({
           setDragging(false);
           const element = panelRef.current;
           if (element === null) return;
-          // Re-anchor on whichever edge is closer: a panel resting near the
-          // bottom must grow upward when it expands, or it leaves the screen.
+          // Re-anchor on whichever edge is nearer: a panel resting near the
+          // bottom grows upward when it expands, and one resting near the right
+          // keeps its gap when the window grows.
           const rect = element.getBoundingClientRect();
           const parent = element.offsetParent;
           const parentRect = parent === null ? null : parent.getBoundingClientRect();
@@ -545,14 +570,18 @@ window.__ModuleLoader__.load({
           const parentTop = parentRect?.top ?? 0;
           const parentWidth = parentRect?.width ?? window.innerWidth;
           const parentHeight = parentRect?.height ?? window.innerHeight;
-          const maxLeft = Math.max(8, parentWidth - rect.width - 8);
-          const maxEdge = Math.max(8, parentHeight - rect.height - 8);
-          const left = Math.min(Math.max(8, rect.left - parentLeft), maxLeft);
+          const relativeLeft = rect.left - parentLeft;
           const relativeTop = rect.top - parentTop;
-          const relativeBottom = parentHeight - (rect.bottom - parentTop);
-          const next = relativeTop + rect.height / 2 > parentHeight / 2
-            ? { left, bottom: Math.min(Math.max(8, relativeBottom), maxEdge) }
-            : { left, top: Math.min(Math.max(8, relativeTop), maxEdge) };
+          const maxLeft = Math.max(8, parentWidth - rect.width - 8);
+          const maxTop = Math.max(8, parentHeight - rect.height - 8);
+          const next = relativeLeft + rect.width / 2 > parentWidth / 2
+            ? { right: Math.min(Math.max(8, parentWidth - relativeLeft - rect.width), maxLeft) }
+            : { left: Math.min(Math.max(8, relativeLeft), maxLeft) };
+          if (relativeTop + rect.height / 2 > parentHeight / 2) {
+            next.bottom = Math.min(Math.max(8, parentHeight - relativeTop - rect.height), maxTop);
+          } else {
+            next.top = Math.min(Math.max(8, relativeTop), maxTop);
+          }
           setPosition(next);
           writeJson(POSITION_KEY, next);
         };
