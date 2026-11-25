@@ -56,6 +56,17 @@ test('feed filters by category, since, and limit, newest first', () => {
   assert.equal(store.feed({ limit: 0 }).items.length, 1, 'limit floors at one');
 });
 
+test('a date-only row from today outranks a timed row from yesterday', () => {
+  const clock = fakeClock('2026-11-25T16:00:00+08:00');
+  const store = createStore({ now: clock.now });
+  store.register(SOURCE);
+  store.ingest('s1', [
+    row('昨天的晚间稿', 'https://a/1', { publishedAt: '2026-11-24T21:30:00+08:00' }),
+    row('今天的日期稿', 'https://a/2', { publishedAt: '2026-11-25T00:00:00+08:00' }),
+  ]);
+  assert.deepEqual(store.feed().items.map((item) => item.title), ['今天的日期稿', '昨天的晚间稿']);
+});
+
 test('a failing source keeps rows and reports stale', () => {
   const clock = fakeClock();
   const store = createStore({ now: clock.now });

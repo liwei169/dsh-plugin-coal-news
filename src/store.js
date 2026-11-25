@@ -13,14 +13,19 @@ export function newsId(url) {
   return createHash('sha1').update(url).digest('hex').slice(0, 16);
 }
 
+/** A row whose source printed only a date carries midnight, not a real time. */
+const DAY_ONLY = /T00:00:00\+08:00$/;
+
 /**
- * Sort key: publication date when known, otherwise zero so undated rows fall
- * below every dated row instead of crowding the top of the feed.
+ * Sort key: publication time when known, else the end of that day for a
+ * date-only row (capped at now) so today's date-only rows still rank above
+ * yesterday's timed ones, and zero for undated rows so they sink to the bottom.
  */
-function stamp(item) {
+function stamp(item, current = Date.now()) {
   if (typeof item.publishedAt !== 'string' || item.publishedAt === '') return 0;
   const parsed = Date.parse(item.publishedAt);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (!Number.isFinite(parsed)) return 0;
+  return DAY_ONLY.test(item.publishedAt) ? Math.min(parsed + 86_399_999, current) : parsed;
 }
 
 /**
@@ -57,7 +62,7 @@ export function createStore({ now = () => Date.now(), maxItems = 1200 } = {}) {
 
   function prune() {
     if (items.size <= maxItems) return;
-    const ordered = [...items.values()].sort((a, b) => stamp(a) - stamp(b));
+    const ordered = [...items.values()].sort((a, b) => stamp(a, now()) - stamp(b, now()));
     for (const item of ordered.slice(0, items.size - maxItems)) items.delete(item.id);
   }
 
@@ -137,8 +142,8 @@ export function createStore({ now = () => Date.now(), maxItems = 1200 } = {}) {
       const wanted = Array.isArray(categories) && categories.length > 0 ? new Set(categories) : undefined;
       const rows = [...items.values()]
         .filter((item) => wanted === undefined || wanted.has(item.category))
-        .filter((item) => !Number.isFinite(sinceMs) || stamp(item) > sinceMs)
-        .sort((a, b) => stamp(b) - stamp(a))
+        .filter((item) => !Number.isFinite(sinceMs) || stamp(item, now()) > sinceMs)
+        .sort((a, b) => stamp(b, now()) - stamp(a, now()))
         .slice(0, Math.max(1, Math.min(500, limit)));
       const errors = [...sources.values()]
         .filter((state) => state.error !== null)
@@ -193,3 +198,4 @@ export function createStore({ now = () => Date.now(), maxItems = 1200 } = {}) {
     },
   };
 }
+

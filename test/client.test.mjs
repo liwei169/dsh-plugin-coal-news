@@ -204,6 +204,58 @@ test('a right-anchored position follows the right edge when the window grows', (
   assert.equal(tree.props.style.top, 'auto');
 });
 
+test('a date-only item from today reads 今天 instead of an hour count', () => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T00:00:00+08:00`;
+  const snapshot = {
+    items: [{
+      id: 't1',
+      title: '新疆铁路疆煤外运量完成9730万吨',
+      url: 'https://example.com/2',
+      source: '中国煤炭报',
+      category: 'price',
+      publishedAt: todayIso,
+      fetchedAt: todayIso,
+    }],
+    quotes: [],
+    updatedAt: Date.parse(todayIso),
+    stale: false,
+  };
+  const plugin = loadClient({ storage: { 'dsh.coal-news.snapshot.v1': JSON.stringify(snapshot) } });
+  const { ctx, registrations } = fakeCtx();
+  plugin.apply(ctx);
+  const rendered = texts(registrations[0].component());
+  assert.ok(rendered.some((line) => line.includes('今天')), 'day label shown');
+  assert.ok(!rendered.some((line) => /小时前/.test(line)), 'no hour count for a date-only row');
+});
+
+test('a timed item still shows a relative hour count', () => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = new Date(now.getTime() - 2 * 3600_000);
+  const iso = `${stamp.getFullYear()}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}T${pad(stamp.getHours())}:${pad(stamp.getMinutes())}:00+08:00`;
+  const snapshot = {
+    items: [{
+      id: 't2',
+      title: '某煤矿开展瓦斯抽采专项检查',
+      url: 'https://example.com/3',
+      source: '国家矿山安全监察局',
+      category: 'safety',
+      publishedAt: iso,
+      fetchedAt: iso,
+    }],
+    quotes: [],
+    updatedAt: Date.now(),
+    stale: false,
+  };
+  const plugin = loadClient({ storage: { 'dsh.coal-news.snapshot.v1': JSON.stringify(snapshot) } });
+  const { ctx, registrations } = fakeCtx();
+  plugin.apply(ctx);
+  const rendered = texts(registrations[0].component());
+  assert.ok(rendered.some((line) => /2 小时前/.test(line)), 'relative hours for a timed row');
+});
+
 test('the header exposes a close control', () => {
   const plugin = loadClient();
   const { ctx, registrations } = fakeCtx();

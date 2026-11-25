@@ -128,17 +128,34 @@ const CONTEXT_DATE_PATTERNS = [
 
 const EARLIEST_YEAR = 2015;
 
+/** A clock time printed immediately after the date, such as ` 9:45` or `&nbsp;14:05`. */
+const TIME_SUFFIX = /^[\s\u3000|·\-–]{0,4}(\d{1,2}):(\d{2})(?!\d)/;
+
+/** Build an Asia/Shanghai timestamp from a date and an optional clock time. */
+function isoStamp(year, month, day, hour, minute) {
+  const date = isoDate(year, month, day);
+  if (date === undefined) return undefined;
+  if (hour === undefined || minute === undefined) return date;
+  const h = Number(hour);
+  const m = Number(minute);
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h > 23 || m > 59) return date;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.slice(0, 10)}T${pad(h)}:${pad(m)}:00+08:00`;
+}
+
 /**
- * Find the publication date a list row prints beside its link.
+ * Find the publication time a list row prints beside its link.
  *
  * Chinese CMSs very often put the date in the neighbouring cell rather than in
- * the URL, so without this a whole site looks undated. The window is small and
- * the year is validated to keep neighbouring rows from leaking in.
+ * the URL, so without this a whole site looks undated. When the row also prints
+ * a clock time (`2026-11-25 9:45`) it is used, so today's rows do not all look
+ * like midnight. The window is small and the year is validated to keep
+ * neighbouring rows from leaking in.
  *
  * @param html - page source.
  * @param start - anchor start offset.
  * @param end - anchor end offset.
- * @returns ISO timestamp at Asia/Shanghai midnight, or undefined.
+ * @returns ISO timestamp at Asia/Shanghai time, or undefined.
  */
 export function dateFromContext(html, start, end) {
   const windows = [
@@ -152,7 +169,11 @@ export function dateFromContext(html, start, end) {
       if (match === null) continue;
       const year = Number(match[1]);
       if (year < EARLIEST_YEAR || year > latestYear) continue;
-      const iso = isoDate(match[1], match[2], match[3]);
+      const after = window.slice(match.index + match[0].length);
+      const time = TIME_SUFFIX.exec(after);
+      const iso = time === null
+        ? isoStamp(match[1], match[2], match[3])
+        : isoStamp(match[1], match[2], match[3], time[1], time[2]);
       if (iso !== undefined) return iso;
     }
   }
@@ -187,9 +208,17 @@ export function parseListPage(html, {
     if (titleExclude !== undefined && titleExclude.test(title)) continue;
     if (seen.has(anchor.url)) continue;
     seen.add(anchor.url);
-    const publishedAt = dateFromUrl(anchor.url)
-      ?? dateFromText(anchor.title)
-      ?? dateFromContext(html, anchor.start, anchor.end);
+    // A URL date is the most reliable, but it only carries the day. When the
+    // row prints a clock time on that same day, the more precise value wins.
+    const fromUrl = dateFromUrl(anchor.url);
+    const fromText = dateFromText(anchor.title);
+    const fromContext = dateFromContext(html, anchor.start, anchor.end);
+    const candidates = [fromUrl, fromText, fromContext].filter((value) => value !== undefined);
+    const first = candidates[0];
+    const precise = candidates.find((value) => !value.endsWith('T00:00:00+08:00'));
+    const publishedAt = precise !== undefined && first !== undefined && precise.slice(0, 10) === first.slice(0, 10)
+      ? precise
+      : first;
     rows.push({ url: anchor.url, title, ...publishedAt === undefined ? {} : { publishedAt } });
   }
   rows.sort((a, b) => (Date.parse(b.publishedAt ?? '') || 0) - (Date.parse(a.publishedAt ?? '') || 0));

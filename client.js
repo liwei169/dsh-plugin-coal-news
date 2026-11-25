@@ -42,6 +42,8 @@ window.__ModuleLoader__.load({
         dragHint: '按住标题可拖动，双击复位',
         close: '关闭',
         justNow: '刚刚',
+        today: '今天',
+        yesterday: '昨天',
         minutesAgo: (n) => `${n} 分钟前`,
         hoursAgo: (n) => `${n} 小时前`,
         daysAgo: (n) => `${n} 天前`,
@@ -64,6 +66,8 @@ window.__ModuleLoader__.load({
         dragHint: 'Drag the title to move, double-click to reset',
         close: 'Close',
         justNow: 'just now',
+        today: 'today',
+        yesterday: 'yesterday',
         minutesAgo: (n) => `${n} min ago`,
         hoursAgo: (n) => `${n} h ago`,
         daysAgo: (n) => `${n} d ago`,
@@ -350,8 +354,27 @@ window.__ModuleLoader__.load({
       return result.value;
     }
 
-    function relative(stamp, now, text) {
+    // Rows whose source only prints a date carry midnight; showing "17 小时前"
+    // for them would read as stale, so they get a day label instead.
+    const DAY_ONLY = /T00:00:00\+08:00$/;
+
+    function sameDay(a, b) {
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+
+    function dayLabel(stamp, now, text) {
+      const date = new Date(stamp);
+      if (sameDay(date, new Date(now))) return text.today;
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (sameDay(date, yesterday)) return text.yesterday;
+      return date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' });
+    }
+
+    function relative(iso, now, text) {
+      const stamp = Date.parse(iso ?? '');
       if (!Number.isFinite(stamp) || stamp <= 0) return '';
+      if (DAY_ONLY.test(String(iso))) return dayLabel(stamp, now, text);
       const diff = Math.max(0, now - stamp);
       if (diff < 60_000) return text.justNow;
       if (diff < 3_600_000) return text.minutesAgo(Math.floor(diff / 60_000));
@@ -366,7 +389,7 @@ window.__ModuleLoader__.load({
     }
 
     function itemMeta(item, now, text) {
-      const when = relative(Date.parse(item.publishedAt ?? item.fetchedAt ?? ''), now, text);
+      const when = relative(item.publishedAt ?? item.fetchedAt, now, text);
       return when === '' ? String(item.source ?? '') : `${item.source} · ${when}`;
     }
 

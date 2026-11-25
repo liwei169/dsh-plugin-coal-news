@@ -19,6 +19,20 @@ test('dateFromContext reads a date printed before the link', () => {
   assert.equal(iso, '2026-11-18T00:00:00+08:00');
 });
 
+test('dateFromContext keeps the clock time when the row prints one', () => {
+  const html = '<li><a href="/news/1.html">某煤矿智能化工作面通过验收</a><span>2026-11-25 9:45</span></li>';
+  const anchor = /<a\b[^>]*>[\s\S]*?<\/a>/.exec(html);
+  const iso = dateFromContext(html, anchor.index, anchor.index + anchor[0].length);
+  assert.equal(iso, '2026-11-25T09:45:00+08:00');
+});
+
+test('dateFromContext falls back to midnight without a clock time', () => {
+  const html = '<li><a href="/news/1.html">某煤矿智能化工作面通过验收</a><span>2026-11-25</span></li>';
+  const anchor = /<a\b[^>]*>[\s\S]*?<\/a>/.exec(html);
+  const iso = dateFromContext(html, anchor.index, anchor.index + anchor[0].length);
+  assert.equal(iso, '2026-11-25T00:00:00+08:00');
+});
+
 test('dateFromContext ignores implausible years', () => {
   const html = '<li><a href="/news/1.html">标题标题标题标题</a><span>1999-01-01</span></li>';
   const anchor = /<a\b[^>]*>[\s\S]*?<\/a>/.exec(html);
