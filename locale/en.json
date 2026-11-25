@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Coal news",
+    "description": "Puts a “Tengsheng picks” board in the bottom-left corner of DSH: coal industry headlines by tech, safety, price, and policy, refreshed every 30 seconds, with live coking-coal and coke futures quotes. Fetching and caching run in the local Host; only titles, sources, and original links are kept."
+  }
+}

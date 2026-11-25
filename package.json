@@ -1,0 +1,64 @@
+{
+  "name": "dsh-plugin-coal-news",
+  "version": "0.7.0",
+  "description": "煤矿资讯：在 DSH 左下角常驻「腾盛推荐」信息板，每 30 秒刷新煤矿科技、安全、价格与政策动态。",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "coal",
+    "coal-news",
+    "煤矿",
+    "煤炭资讯"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liwei169/dsh-plugin-coal-news.git"
+  },
+  "homepage": "https://github.com/liwei169/dsh-plugin-coal-news#readme",
+  "bugs": {
+    "url": "https://github.com/liwei169/dsh-plugin-coal-news/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check client.js",
+    "test": "node --test \"test/*.test.mjs\"",
+    "self": "node scripts/selftest.mjs"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "src",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "CHANGELOG.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# Registers the 煤矿资讯 Loader row.
+- insert:
+    - id: coal-news
+      name: dsh-plugin-coal-news
